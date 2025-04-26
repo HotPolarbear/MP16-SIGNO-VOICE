@@ -23,7 +23,7 @@ actions = np.array(["Book","Do","Eat","Go","Good","Hello","Home","Hungry","I","M
 # Initialize OpenAI client for language processing
 client = OpenAI(
     base_url="https://api-inference.huggingface.co/v1/",
-    api_key="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"
+    api_key=""
 )
 
 # Function to translate raw sign language to proper English
