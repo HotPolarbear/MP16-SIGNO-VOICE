@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sign Language Recognition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .video-container {
+            margin: 20px 0;
+            text-align: center;
+            position: relative;
+        }
+        #videoElement {
+            width: 640px;
+            height: 480px;
+            background-color: #000;
+            border-radius: 10px;
+            border: 3px solid #3498db;
+        }
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        button {
+            padding: 12px 24px;
+            margin: 0 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        #result {
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            max-width: 600px;
+            text-align: center;
+            display: none;
+        }
+        .prediction {
+            font-size: 24px;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+        .confidence {
+            font-size: 16px;
+            color: #7f8c8d;
+        }
+        #processingIndicator {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .timer {
+            font-size: 24px;
+            color: #e74c3c;
+            margin: 10px 0;
+        }
+        .recording-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background-color: #e74c3c;
+            color: white;
+            border-radius: 5px;
+            display: none;
+        }
+        .sentence {
+            font-size: 28px;
+            color: #2c3e50;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 5px solid #3498db;
+        }
+        .instructions {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 5px solid #27ae60;
+            text-align: left;
+        }
+        .prediction-item {
+            margin: 15px 0;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .paused-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 5px;
+            display: none;
+        }
+        .countdown {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 72px;
+            color: #e74c3c;
+            font-weight: bold;
+            display: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .settings {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 5px solid #9b59b6;
+        }
+        .setting-item {
+            margin: 10px 0;
+        }
+        input[type="range"] {
+            width: 100%;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sign Language to Sentence Converter</h1>
+        
+        <div class="settings">
+            <div class="setting-item">
+                <label for="durationSlider">Sign Duration (seconds): <span id="durationValue">2</span></label>
+                <input type="range" id="durationSlider" min="1" max="10" value="2" step="1">
+            </div>
+            <div class="setting-item">
+                <label for="signCountSlider">Number of Signs: <span id="signCountValue">3</span></label>
+                <input type="range" id="signCountSlider" min="1" max="10" value="3" step="1">
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>How to use:</h3>
+            <ol>
+                <li>Adjust the sign duration and number of signs using the sliders above</li>
+                <li>Click "Start Recording" to begin</li>
+                <li>A 3-second countdown will appear before recording starts</li>
+                <li>Perform a sign for the selected duration (default: 2 seconds)</li>
+                <li>The recording will automatically pause for 0.25 seconds after each sign</li>
+                <li>A 3-second countdown will appear before recording the next sign</li>
+                <li>Recording will automatically stop after the selected number of signs</li>
+                <li>Press SPACE to manually pause/resume recording if needed</li>
+                <li>Click "Stop Recording" to end recording early</li>
+            </ol>
+        </div>
+        
+        <div class="video-container">
+            <video id="videoElement" autoplay></video>
+            <div class="timer" id="timer" style="display: none">2</div>
+            <div class="recording-indicator" id="recordingIndicator">Recording</div>
+            <div class="paused-indicator" id="pausedIndicator">Paused</div>
+            <div class="countdown" id="countdown">3</div>
+        </div>
+        
+        <div class="controls">
+            <button id="startButton">Start Recording</button>
+            <button id="pauseButton" disabled>Pause/Resume (SPACE)</button>
+            <button id="stopButton" disabled>Stop Recording</button>
+        </div>
+
+        <div id="processingIndicator">
+            <div class="spinner"></div>
+            <p>Processing your sign language...</p>
+        </div>
+
+        <div id="result">
+            <h2>Recognition Results</h2>
+            <div class="sentence" id="sentenceResult"></div>
+            <h3>Individual Signs:</h3>
+            <div id="predictionsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Check browser compatibility
+        if (!window.MediaRecorder) {
+            alert('Your browser does not support MediaRecorder. Please try Chrome, Firefox, or Edge.');
+            document.getElementById('startButton').disabled = true;
+        }
+
+        let mediaRecorder;
+        let recordedChunks = [];
+        const videoElement = document.getElementById('videoElement');
+        const startButton = document.getElementById('startButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const stopButton = document.getElementById('stopButton');
+        const resultDiv = document.getElementById('result');
+        const processingIndicator = document.getElementById('processingIndicator');
+        const timer = document.getElementById('timer');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        let timerInterval;
+        let isRecording = false;
+        let recordingStartTime = 0;
+        let pauseInfo = [];
+        let currentPauseStart = null;
+        let segmentTimer = null;
+        let maxRecordingTime = 60000; // 60 seconds max total recording time
+        let frameCapture;
+        let signDuration = 2; // Changed from 3 to 2 seconds for default sign duration
+        let signCount = 3; // Maximum number of signs to record
+        let currentSignCount = 0; // Counter for recorded signs
+        let autoPauseTime = 250; // 0.25 seconds pause between signs (changed from 500)
+
+        // Initialize the sliders
+        const durationSlider = document.getElementById('durationSlider');
+        const durationValue = document.getElementById('durationValue');
+        const signCountSlider = document.getElementById('signCountSlider');
+        const signCountValue = document.getElementById('signCountValue');
+
+        durationSlider.addEventListener('input', function() {
+            signDuration = parseInt(this.value);
+            durationValue.textContent = signDuration;
+        });
+
+        signCountSlider.addEventListener('input', function() {
+            signCount = parseInt(this.value);
+            signCountValue.textContent = signCount;
+        });
+
+        // Get camera access
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                videoElement.srcObject = stream;
+            })
+            .catch(error => {
+                console.error('Error accessing camera:', error);
+                alert('Error accessing camera. Please make sure you have granted camera permissions.');
+            });
+
+        function updateTimer(seconds) {
+            timer.textContent = seconds;
+            if (seconds <= 0) {
+                // Auto-pause after signDuration seconds of recording a sign
+                togglePause();
+            }
+        }
+
+        function togglePause() {
+            if (isRecording) {
+                // Pause recording
+                isRecording = false;
+                currentPauseStart = Date.now() / 1000; // Convert to seconds
+                recordingIndicator.style.display = 'none';
+                document.getElementById('pausedIndicator').style.display = 'block';
+                clearInterval(segmentTimer);
+                timer.style.display = 'none';
+                
+                // Increment sign count
+                currentSignCount++;
+                
+                // Check if we've reached the maximum number of signs
+                if (currentSignCount >= signCount) {
+                    // Stop recording after the last sign
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                    } else if (frameCapture) {
+                        clearInterval(frameCapture);
+                        
+                        // Process frames if using fallback method
+                        const blob = new Blob(recordedChunks, { type: 'image/jpeg' });
+                        const formData = new FormData();
+                        formData.append('video', blob, 'frames.jpg');
+                        formData.append('pause_info', JSON.stringify(pauseInfo));
+                        sendVideoToServer(formData);
+                    }
+                    return;
+                }
+                
+                // Auto-resume after 0.5 seconds
+                setTimeout(() => {
+                    // Show countdown before resuming
+                    const countdownElement = document.getElementById('countdown');
+                    let countdownValue = 3;
+                    
+                    countdownElement.textContent = countdownValue;
+                    countdownElement.style.display = 'block';
+                    
+                    const countdownInterval = setInterval(() => {
+                        countdownValue--;
+                        
+                        if (countdownValue > 0) {
+                            countdownElement.textContent = countdownValue;
+                        } else {
+                            clearInterval(countdownInterval);
+                            countdownElement.style.display = 'none';
+                            
+                            // Resume recording
+                            isRecording = true;
+                            if (currentPauseStart !== null) {
+                                pauseInfo.push({
+                                    start: currentPauseStart,
+                                    end: Date.now() / 1000 // Convert to seconds
+                                });
+                                currentPauseStart = null;
+                            }
+                            document.getElementById('pausedIndicator').style.display = 'none';
+                            recordingIndicator.style.display = 'block';
+                            recordingIndicator.textContent = 'Recording';
+                            
+                            // Start a new timer for this segment
+                            let seconds = signDuration;
+                            timer.style.display = 'block';
+                            updateTimer(seconds);
+                            segmentTimer = setInterval(() => {
+                                seconds--;
+                                updateTimer(seconds);
+                            }, 1000);
+                        }
+                    }, 1000);
+                }, autoPauseTime);
+            } else {
+                // This part handles manual pause/resume (when user presses space)
+                // Show countdown before resuming
+                const countdownElement = document.getElementById('countdown');
+                let countdownValue = 3;
+                
+                countdownElement.textContent = countdownValue;
+                countdownElement.style.display = 'block';
+                
+                const countdownInterval = setInterval(() => {
+                    countdownValue--;
+                    
+                    if (countdownValue > 0) {
+                        countdownElement.textContent = countdownValue;
+                    } else {
+                        clearInterval(countdownInterval);
+                        countdownElement.style.display = 'none';
+                        
+                        // Resume recording
+                        isRecording = true;
+                        if (currentPauseStart !== null) {
+                            pauseInfo.push({
+                                start: currentPauseStart,
+                                end: Date.now() / 1000 // Convert to seconds
+                            });
+                            currentPauseStart = null;
+                        }
+                        document.getElementById('pausedIndicator').style.display = 'none';
+                        recordingIndicator.style.display = 'block';
+                        recordingIndicator.textContent = 'Recording';
+                        
+                        // Start a new timer for this segment
+                        let seconds = signDuration;
+                        timer.style.display = 'block';
+                        updateTimer(seconds);
+                        segmentTimer = setInterval(() => {
+                            seconds--;
+                            updateTimer(seconds);
+                        }, 1000);
+                    }
+                }, 1000);
+            }
+        }
+
+        function captureFrames() {
+            const canvas = document.createElement('canvas');
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            const ctx = canvas.getContext('2d');
+            
+            // Capture a frame
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            
+            // Convert to blob
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    recordedChunks.push(blob);
+                }
+            }, 'image/jpeg', 0.95);
+        }
+
+        // When starting recording
+        startButton.onclick = () => {
+            // Show countdown before starting recording
+            const countdownElement = document.getElementById('countdown');
+            let countdownValue = 3;
+            
+            countdownElement.textContent = countdownValue;
+            countdownElement.style.display = 'block';
+            
+            const countdownInterval = setInterval(() => {
+                countdownValue--;
+                
+                if (countdownValue > 0) {
+                    countdownElement.textContent = countdownValue;
+                } else {
+                    clearInterval(countdownInterval);
+                    countdownElement.style.display = 'none';
+                    
+                    // Start recording after countdown
+                    startRecording();
+                }
+            }, 1000);
+        };
+        
+        // Function to start the actual recording
+        function startRecording() {
+            recordedChunks = [];
+            pauseInfo = [];
+            currentSignCount = 0; // Reset sign counter
+            const stream = videoElement.srcObject;
+            
+            if (!stream) {
+                alert('No camera stream available. Please refresh and grant camera permissions.');
+                return;
+            }
+            
+            // Try to use a format that's more compatible with OpenCV
+            const options = { 
+                mimeType: 'video/webm;codecs=vp8',
+                videoBitsPerSecond: 2500000 // Higher bitrate for better quality
+            };
+            
+            try {
+                mediaRecorder = new MediaRecorder(stream, options);
+                console.log("MediaRecorder created with options:", options);
+            } catch (e) {
+                console.error('MediaRecorder error with specified mime type:', e);
+                // Fall back to default
+                try {
+                    mediaRecorder = new MediaRecorder(stream);
+                    console.log("MediaRecorder created with default options");
+                } catch (e2) {
+                    console.error('MediaRecorder error with default settings:', e2);
+                    
+                    // Use frame capture as fallback if MediaRecorder fails
+                    if (!window.MediaRecorder) {
+                        frameCapture = setInterval(captureFrames, 100); // Capture every 100ms
+                    }
+                    
+                    alert('Your browser does not support recording. Using fallback method.');
+                }
+            }
+            
+            // Make sure we're capturing data
+            if (mediaRecorder) {
+                mediaRecorder.ondataavailable = (event) => {
+                    console.log('Data available event, size:', event.data.size);
+                    if (event.data && event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    processingIndicator.style.display = 'block';
+                    startButton.disabled = true;
+                    pauseButton.disabled = true;
+                    stopButton.disabled = true;
+
+                    // Add final pause if recording was active at the end
+                    if (isRecording && currentPauseStart === null) {
+                        // No need to add a pause at the end
+                    } else if (!isRecording && currentPauseStart !== null) {
+                        pauseInfo.push({
+                            start: currentPauseStart,
+                            end: Date.now() / 1000
+                        });
+                    }
+
+                    // Create a blob from the recorded chunks
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    
+                    // Debug: Check if blob is valid
+                    console.log('Blob size:', blob.size);
+                    if (blob.size === 0) {
+                        processingIndicator.style.display = 'none';
+                        resultDiv.style.display = 'block';
+                        document.getElementById('predictionsContainer').innerHTML = 'Error: No video data recorded';
+                        startButton.disabled = false;
+                        return;
+                    }
+                    
+                    const formData = new FormData();
+                    
+                    // Make sure to use the correct field name 'video'
+                    formData.append('video', blob, 'recording.webm');
+                    formData.append('pause_info', JSON.stringify(pauseInfo));
+                    
+                    console.log("Sending video to server, blob size:", blob.size);
+                    console.log("Pause info:", pauseInfo);
+                    
+                    sendVideoToServer(formData);
+                };
+                
+                // Start recording
+                mediaRecorder.start(1000); // Collect data every second
+                console.log("MediaRecorder started");
+                
+                // Update UI
+                recordingStartTime = Date.now();
+                isRecording = true;
+                recordingIndicator.style.display = 'block';
+                pauseButton.disabled = false;
+                stopButton.disabled = false;
+                
+                // Start a timer for this segment
+                let seconds = signDuration;
+                timer.style.display = 'block';
+                updateTimer(seconds);
+                segmentTimer = setInterval(() => {
+                    seconds--;
+                    updateTimer(seconds);
+                }, 1000);
+                
+                // Set a maximum recording time
+                setTimeout(() => {
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        console.log("Maximum recording time reached, stopping recording");
+                        mediaRecorder.stop();
+                    }
+                }, maxRecordingTime);
+            }
+        };
+
+        // When stopping recording
+        stopButton.onclick = () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            } else if (frameCapture) {
+                clearInterval(frameCapture);
+                
+                // Process frames if using fallback method
+                const blob = new Blob(recordedChunks, { type: 'image/jpeg' });
+                const formData = new FormData();
+                formData.append('video', blob, 'frames.jpg');
+                formData.append('pause_info', JSON.stringify(pauseInfo));
+                sendVideoToServer(formData);
+            }
+            
+            clearInterval(segmentTimer);
+            timer.style.display = 'none';
+            recordingIndicator.style.display = 'none';
+        };
+
+        // Space key to pause/resume
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space' && !startButton.disabled) {
+                event.preventDefault(); // Prevent scrolling
+                togglePause();
+            }
+        });
+
+        function sendVideoToServer(formData) {
+            fetch('/process_video', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                processingIndicator.style.display = 'none';
+                resultDiv.style.display = 'block';
+                
+                console.log("Server response:", data);
+                
+                // Display the translated sentence
+                document.getElementById('sentenceResult').textContent = data.sentence;
+                
+                // Display individual predictions
+                const predictionsContainer = document.getElementById('predictionsContainer');
+                predictionsContainer.innerHTML = ''; // Clear previous results
+                
+                if (data.predictions && data.predictions.length > 0) {
+                    data.predictions.forEach(prediction => {
+                        const predictionItem = document.createElement('div');
+                        predictionItem.className = 'prediction-item';
+                        
+                        const signElement = document.createElement('div');
+                        signElement.className = 'prediction';
+                        signElement.textContent = prediction.sign;
+                        
+                        const confidenceElement = document.createElement('div');
+                        confidenceElement.className = 'confidence';
+                        confidenceElement.textContent = `Confidence: ${(prediction.confidence * 100).toFixed(2)}%`;
+                        
+                        predictionItem.appendChild(signElement);
+                        predictionItem.appendChild(confidenceElement);
+                        predictionsContainer.appendChild(predictionItem);
+                    });
+                } else {
+                    predictionsContainer.innerHTML = '<p>No signs detected with sufficient confidence.</p>';
+                }
+                
+                // Re-enable buttons
+                startButton.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                processingIndicator.style.display = 'none';
+                alert('Error processing video: ' + error.message);
+                startButton.disabled = false;
+            });
+        }
+    </script>
+</body>
+</html>
+
