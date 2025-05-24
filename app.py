@@ -22,7 +22,7 @@ actions = np.array(["Book","Do","Eat","Go","Good","Hello","Home","Hungry","I","M
 
 # Initialize OpenAI client for language processing
 client = OpenAI(
-    base_url="https://api-inference.huggingface.co/v1/",
+    base_url="",
     api_key=""
 )
 
@@ -49,7 +49,7 @@ def translate_to_english(raw_signs):
     try:
         # Call the language model
         response = client.chat.completions.create(
-            model="meta-llama/Meta-Llama-3-8B-Instruct",
+            model="",
             messages=messages,
             max_tokens=50  # Increased for longer sentences
         )
